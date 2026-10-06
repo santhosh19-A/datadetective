@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Data Detective AI</title>
+
+    <link
+        rel="stylesheet"
+        href="/style.css"
+    >
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- =========================================
+             SIDEBAR
+        ========================================== -->
+
+        <aside class="sidebar">
+
+            <div class="brand">
+                <div class="brand-icon">🔎</div>
+
+                <div>
+                    <h1>Data Detective AI</h1>
+                    <p>Ask. Analyze. Discover.</p>
+                </div>
+            </div>
+
+
+            <div class="sidebar-section">
+
+                <label
+                    class="upload-box"
+                    for="fileInput"
+                >
+
+                    <div class="upload-icon">
+                        📂
+                    </div>
+
+                    <strong>
+                        Upload Dataset
+                    </strong>
+
+                    <span>
+                        CSV, XLSX, XLS or JSON
+                    </span>
+
+                </label>
+
+                <input
+                    id="fileInput"
+                    type="file"
+                    accept=".csv,.xlsx,.xls,.json"
+                    hidden
+                />
+
+            </div>
+
+
+            <div
+                id="datasetCard"
+                class="dataset-card hidden"
+            >
+
+                <div class="dataset-title">
+                    <span>📊</span>
+                    <strong id="datasetName">
+                        Dataset
+                    </strong>
+                </div>
+
+                <div class="dataset-stats">
+
+                    <div>
+                        <span>Rows</span>
+                        <strong id="datasetRows">
+                            -
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Columns</span>
+                        <strong id="datasetColumns">
+                            -
+                        </strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <button
+                id="clearChatBtn"
+                class="clear-btn"
+                type="button"
+            >
+                🗑️ Clear Chat
+            </button>
+
+
+            <div class="sidebar-footer">
+                <span class="status-dot"></span>
+                <span id="statusText">
+                    Ready
+                </span>
+            </div>
+
+        </aside>
+
+
+        <!-- =========================================
+             MAIN
+        ========================================== -->
+
+        <main class="main">
+
+            <!-- HEADER -->
+
+            <header class="topbar">
+
+                <div>
+                    <h2>
+                        Data Detective AI
+                    </h2>
+
+                    <p>
+                        Ask anything about your
+                        uploaded data.
+                    </p>
+                </div>
+
+                <div
+                    id="connectionStatus"
+                    class="connection-status"
+                >
+                    <span class="status-dot"></span>
+                    Online
+                </div>
+
+            </header>
+
+
+            <!-- CHAT -->
+
+            <section
+                id="chatContainer"
+                class="chat-container"
+            >
+
+                <div
+                    id="welcomeMessage"
+                    class="welcome"
+                >
+
+                    <div class="welcome-icon">
+                        🔎
+                    </div>
+
+                    <h2>
+                        Welcome to Data Detective AI
+                    </h2>
+
+                    <p>
+                        Upload a dataset and ask
+                        questions naturally in
+                        English, Tamil or Tanglish.
+                    </p>
+
+                    <div class="welcome-examples">
+
+                        <button
+                            class="example-btn"
+                            type="button"
+                            data-question="Which city has the most customers?"
+                        >
+                            📍 Most customers by city
+                        </button>
+
+                        <button
+                            class="example-btn"
+                            type="button"
+                            data-question="Which product has the highest sales?"
+                        >
+                            📈 Highest sales
+                        </button>
+
+                        <button
+                            class="example-btn"
+                            type="button"
+                            data-question="Compare sales between cities"
+                        >
+                            ⚖️ Compare cities
+                        </button>
+
+                        <button
+                            class="example-btn"
+                            type="button"
+                            data-question="Show me the overall summary of this dataset"
+                        >
+                            📊 Dataset summary
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- TYPING INDICATOR -->
+
+            <div
+                id="typingIndicator"
+                class="typing-indicator hidden"
+            >
+
+                <div class="message-avatar">
+                    🤖
+                </div>
+
+                <div class="typing-bubble">
+
+                    <span></span>
+                    <span></span>
+                    <span></span>
+
+                </div>
+
+            </div>
+
+
+            <!-- SUGGESTIONS -->
+
+            <div
+                id="suggestions"
+                class="suggestions hidden"
+            >
+            </div>
+
+
+            <!-- INPUT -->
+
+            <section class="input-area">
+
+                <div
+                    id="uploadProgress"
+                    class="upload-progress hidden"
+                >
+                    <div
+                        id="uploadProgressBar"
+                        class="upload-progress-bar"
+                    ></div>
+                </div>
+
+
+                <div class="input-wrapper">
+
+                    <button
+                        id="attachBtn"
+                        class="icon-btn"
+                        type="button"
+                        title="Upload dataset"
+                    >
+                        📎
+                    </button>
+
+
+                    <textarea
+                        id="questionInput"
+                        rows="1"
+                        placeholder="Ask anything..."
+                        autocomplete="off"
+                    ></textarea>
+
+
+                    <button
+                        id="voiceBtn"
+                        class="icon-btn"
+                        type="button"
+                        title="Voice input"
+                    >
+                        🎙️
+                    </button>
+
+
+                    <button
+                        id="sendBtn"
+                        class="send-btn"
+                        type="button"
+                        title="Send"
+                    >
+                        ➤
+                    </button>
+
+                </div>
+
+
+                <div class="input-hint">
+
+                    <span>
+                        Enter to send
+                    </span>
+
+                    <span>
+                        Shift + Enter for new line
+                    </span>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <!-- =========================================
+         RESULT MODAL
+    ========================================== -->
+
+    <div
+        id="resultModal"
+        class="modal hidden"
+    >
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h3>
+                    Query Result
+                </h3>
+
+                <button
+                    id="closeModalBtn"
+                    type="button"
+                >
+                    ✕
+                </button>
+
+            </div>
+
+            <div
+                id="modalBody"
+                class="modal-body"
+            >
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- APP SCRIPT -->
+
+    <script src="/app.js"></script>
+<script src="/report-features.js"></script>
+</body>
+</html>

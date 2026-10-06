@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Data Detective AI</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fb;color:#172033}.app{max-width:1050px;margin:auto;padding:22px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.brand h1{margin:0;font-size:25px}.brand p{margin:5px 0;color:#697386}.card{background:#fff;border:1px solid #e2e7ef;border-radius:18px;padding:16px;margin-top:14px;box-shadow:0 5px 22px rgba(20,30,50,.05)}#messages{min-height:430px;display:flex;flex-direction:column;gap:12px}.bubble{max-width:86%;padding:13px 15px;border-radius:17px;white-space:pre-wrap;line-height:1.5}.user{align-self:flex-end;background:#e9f1ff}.ai{align-self:flex-start;background:#f0f2f5}.composer{display:flex;gap:8px}.composer input{flex:1;border:1px solid #cfd6e2;border-radius:13px;padding:14px;font-size:16px;outline:none}.btn{border:0;border-radius:13px;padding:12px 15px;background:#172033;color:#fff;cursor:pointer}.btn.light{background:#edf0f5;color:#172033}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{border:1px solid #d3d9e3;background:#fff;border-radius:999px;padding:8px 12px;cursor:pointer}.sql{background:#101827;color:#dce7ff;padding:13px;border-radius:12px;overflow:auto;white-space:pre-wrap;font:13px ui-monospace,SFMono-Regular,Consolas,monospace}.result{overflow:auto;margin-top:10px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #dfe4eb;padding:7px;text-align:left}th{background:#f4f6f9}.meta{font-size:13px;color:#697386}.hidden{display:none}.dataset-title{font-weight:700;margin-bottom:8px}.status{font-size:13px;color:#697386;margin-top:7px}.record-actions{display:flex;gap:8px;margin-top:10px}.record-actions a{color:#1d5fd1;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand"><h1>Data Detective AI</h1><p>Ask anything. Chat normally or analyze your uploaded data.</p></div>
+    <label class="btn light">Upload data<input id="file" class="hidden" type="file" accept=".csv,.xlsx,.xls,.json"></label>
+  </div>
+  <div id="messages" class="card"></div>
+  <div id="suggestions" class="card"><div class="meta">AI suggestions will appear here after a reply.</div></div>
+  <div class="card">
+    <div class="composer">
+      <button id="voice" class="btn light" title="Voice input">🎙️</button>
+      <input id="question" autocomplete="off" placeholder="Ask anything...">
+      <button id="send" class="btn">Send</button>
+    </div>
+    <div id="status" class="status">Ready</div>
+  </div>
+</div>
+<script>
+const messages=document.getElementById('messages');
+const suggestions=document.getElementById('suggestions');
+const input=document.getElementById('question');
+const status=document.getElementById('status');
+const history=[];
+function addBubble(role,text){const d=document.createElement('div');d.className='bubble '+role;d.textContent=text;messages.appendChild(d);messages.scrollTop=messages.scrollHeight;return d}
+function addDatasetCard(x){
+ const card=document.createElement('div');card.className='card';
+ const title=document.createElement('div');title.className='dataset-title';title.textContent='Verified dataset answer';card.appendChild(title);
+ const ans=document.createElement('div');ans.className='bubble ai';ans.textContent=x.answer;card.appendChild(ans);
+ const details=document.createElement('details');details.style.marginTop='12px';
+ const sum=document.createElement('summary');sum.textContent='Generated SQL';details.appendChild(sum);
+ const pre=document.createElement('div');pre.className='sql';pre.textContent=x.sql;details.appendChild(pre);card.appendChild(details);
+ const rd=document.createElement('details');rd.style.marginTop='12px';const rs=document.createElement('summary');rs.textContent='Verified result';rd.appendChild(rs);
+ const box=document.createElement('div');box.className='result';
+ if(!x.result?.length){box.textContent='No matching records.'}else{const table=document.createElement('table');const hs=Object.keys(x.result[0]);const head=document.createElement('tr');hs.forEach(h=>{const th=document.createElement('th');th.textContent=h;head.appendChild(th)});table.appendChild(head);x.result.slice(0,200).forEach(row=>{const tr=document.createElement('tr');hs.forEach(h=>{const td=document.createElement('td');td.textContent=row[h]??'';tr.appendChild(td)});table.appendChild(tr)});box.appendChild(table)}
+ rd.appendChild(box);card.appendChild(rd);
+ if(x.excelUrl){const actions=document.createElement('div');actions.className='record-actions';const a=document.createElement('a');a.href=x.excelUrl;a.target='_blank';a.textContent='Download result Excel';actions.appendChild(a);card.appendChild(actions)}
+ messages.appendChild(card);messages.scrollTop=messages.scrollHeight;
+}
+function showSuggestions(list){suggestions.innerHTML='';if(!list?.length){suggestions.innerHTML='<div class="meta">No suggestions for this turn.</div>';return}const wrap=document.createElement('div');wrap.className='chips';list.forEach(text=>{const b=document.createElement('button');b.className='chip';b.textContent=text;b.onclick=()=>{input.value=text;send()};wrap.appendChild(b)});suggestions.appendChild(wrap)}
+async function send(){const text=input.value.trim();if(!text)return;addBubble('user',text);input.value='';status.textContent='Thinking...';try{const r=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:text,conversation:history})});const x=await r.json();if(!r.ok||!x.success)throw new Error(x.error||'Request failed');if(x.type==='dataset')addDatasetCard(x);else addBubble('ai',x.answer);history.push({role:'user',content:text},{role:'assistant',content:x.answer});while(history.length>20)history.shift();showSuggestions(x.suggestions);status.textContent=x.type==='dataset'?`Verified in DuckDB • ${x.responseTime} ms`:'Ready'}catch(e){addBubble('ai','I could not complete that request: '+e.message);status.textContent='Ready'}}
+document.getElementById('send').onclick=send;input.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+document.getElementById('file').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;const fd=new FormData();fd.append('file',file);status.textContent='Loading dataset...';try{const r=await fetch('/api/upload',{method:'POST',body:fd});const x=await r.json();if(!r.ok||!x.success)throw new Error(x.error||'Upload failed');addBubble('ai',`Loaded ${x.fileName} successfully. ${x.rowCount} rows and ${x.columnCount} columns are ready.`);status.textContent='Dataset ready'}catch(err){status.textContent=err.message}finally{e.target.value=''}});
+const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;const voice=document.getElementById('voice');if(Speech){const rec=new Speech();rec.lang='en-IN';rec.interimResults=false;rec.maxAlternatives=1;voice.onclick=()=>{try{rec.start();status.textContent='Listening...'}catch{}};rec.onresult=e=>{input.value=e.results[0][0].transcript;status.textContent='Voice captured';send()};rec.onerror=e=>{status.textContent='Voice input error: '+e.error}}else{voice.onclick=()=>{status.textContent='Voice recognition is not supported in this browser.'}}
+addBubble('ai','Hi nanba 👋 Ask me anything. Upload your dataset whenever you want data-based answers.');
+</script>
+</body>
+</html>
