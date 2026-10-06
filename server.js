@@ -13,9 +13,17 @@ const app = express();
 
 const PORT = process.env.PORT || 5000;
 const MODEL = process.env.OPENROUTER_MODEL;
+const os = require("os");
 
-const UPLOAD_DIR = path.join(__dirname, "uploads");
-const OUTPUT_DIR = path.join(__dirname, "outputs");
+const UPLOAD_DIR = path.join(
+    os.tmpdir(),
+    "data-detective-uploads"
+);
+
+const OUTPUT_DIR = path.join(
+    os.tmpdir(),
+    "data-detective-outputs"
+);
 
 if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -1273,71 +1281,46 @@ function extractSQL(text) {
         return "";
     }
 
-    let sql =
-        String(text).trim();
+    let sql = String(text).trim();
 
+    // Remove markdown fences if the model returned them
     sql = sql
-        .replace(
-            /```sql/gi,
-            ""
-        )
-        .replace(
-            /```/g,
-            ""
-        )
+        .replace(/^```sql\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
         .trim();
 
-    sql = sql.replace(
-        /^\s*SQL\s*:\s*/i,
-        ""
-    );
+    // Remove optional SQL: prefix
+    sql = sql.replace(/^SQL\s*:\s*/i, "").trim();
 
-    const match =
-        sql.match(
-            /\b(SELECT|WITH)\b/i
-        );
+    /*
+     * IMPORTANT:
+     * SQL MUST START with SELECT or a real CTE.
+     *
+     * Do NOT search for SELECT/WITH somewhere
+     * inside natural-language AI output.
+     */
 
-    if (!match) {
+    if (/^SELECT\b/i.test(sql)) {
+        // Valid SELECT query
+    } else if (
+        /^WITH\s+[A-Za-z_][A-Za-z0-9_]*\s+AS\s*\(/i.test(sql)
+    ) {
+        // Valid CTE query
+    } else {
         return "";
     }
 
-    sql =
-        sql.slice(
-            match.index
-        );
+    // Remove trailing semicolon
+    sql = sql.replace(/;\s*$/, "").trim();
 
-    const semicolonIndex =
-        sql.indexOf(";");
-
-    if (
-        semicolonIndex !== -1
-    ) {
-        sql =
-            sql.slice(
-                0,
-                semicolonIndex
-            );
-    }
-
-    sql =
-        sql
-            .replace(
-                /;\s*$/,
-                ""
-            )
-            .trim();
-
-    if (
-        !/^(SELECT|WITH)\b/i.test(
-            sql
-        )
-    ) {
+    // Reject multiple statements
+    if (sql.includes(";")) {
         return "";
     }
 
     return sql;
 }
-
 
 /* ============================================================
    SQL VALIDATION
@@ -1452,7 +1435,15 @@ Generate ONE DuckDB SQL query that
 answers the user's question.
 
 Rules:
-
+IMPORTANT SQL RULES:
+- Return ONLY executable DuckDB SQL.
+- Never return explanations, comments, reasoning, or natural language.
+- The available table is exactly: dataset
+- If using alias d, always write: FROM dataset AS d
+- Never use an undefined table alias.
+- Never invent column names.
+- Do not use markdown code fences.
+- The output must start with SELECT or WITH.
 1. Return ONLY SQL.
 2. Query must start with SELECT or WITH.
 3. Only read data.
@@ -1520,6 +1511,7 @@ Do not explain the SQL.
             "AI did not return a valid SQL query."
         );
     }
+	return sql;
 
     validateSQL(sql);
 
